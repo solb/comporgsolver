@@ -30,6 +30,12 @@ PRINT_STR = 4
 .data
 .align 2
 
+# The feedback to give during a normal run:
+out_1:
+	.asciiz "******************\n**     TENTS    **\n******************\n\n"
+out_2:
+	.asciiz "Initial Puzzle\n\n"
+
 # The feedback to give on errors:
 err_1:
 	.asciiz	"Invalid board size, Tents terminating\n"
@@ -42,6 +48,11 @@ err_2:
 main:
 	addi	$sp,$sp,-4
 	sw	$ra,0($sp)
+	
+	#print a pretty banner:
+	li	$v0,PRINT_STR
+	la	$a0,out_1
+	syscall
 	
 	#prompt for size and initialize grid:
 	li	$v0,READ_INT
@@ -95,6 +106,9 @@ main:
 	expect_done:
 	
 	#print the initial board:
+	li	$v0,PRINT_STR
+	la	$a0,out_2
+	syscall
 	jal	print_grid
 	lw	$ra,0($sp)
 	
