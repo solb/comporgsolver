@@ -49,7 +49,7 @@ main:
 	move	$s0,$v0		#number of rows/cols
 	move	$s1,$zero	#working with rows (not cols)
 	move	$s2,$zero	#current index
-	exp_r: #for each reported row
+	expect: #for each reported row or column
 		#use current grouping scheme and index
 		move	$a0,$s1
 		move	$a1,$s2
@@ -69,8 +69,16 @@ main:
 			jr	$ra #bail out!
 		ok_expectation:
 		
+		#increment counter and maybe loop:
 		addi	$s2,$s2,1
-		bne	$s2,$s0,exp_r #until out of rows
+		bne	$s2,$s0,expect #until out of groups
+		
+		#if we've done all the rows, do the columns:
+		bne	$s1,$zero,expect_done #unless we've done cols, too
+			li	$s1,1 #columns
+			move	$s2,$zero #from the top---err, left
+			j	expect
+	expect_done:
 	
 	lw	$ra,0($sp)
 	addi	$sp,$sp,4
