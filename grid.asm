@@ -150,8 +150,8 @@ print_grid:
 		add	$t1,$t3,$t4 #end-of-row pointer
 		printc: #iterate over cols
 			li	$v0,PRINT_STR
-			lb	$a0,0($t3) #character to print
-			sb	$a0,0($t5) #put in front of a NULL
+			lb	$t6,0($t3) #character to print
+			sb	$t6,0($t5) #put in front of a NULL
 			move	$a0,$t5
 			syscall
 			addi	$t3,$t3,1
