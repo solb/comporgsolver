@@ -75,16 +75,14 @@ main:
 	move	$s1,$zero	#working with rows (not cols)
 	move	$s2,$zero	#current index
 	expect: #for each reported row or column
-		#use current grouping scheme and index
-		move	$a0,$s1
-		move	$a1,$s2
-		
 		#use user-provided expected count:
 		li	$v0,READ_INT
 		syscall
 		move	$a2,$v0
 		
 		#give setting that a try
+		move	$a0,$s1
+		move	$a1,$s2
 		jal	set_expected
 		lw	$ra,0($sp)
 		bne	$v0,$zero,ok_expectation #if unreasonable
