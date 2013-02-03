@@ -7,22 +7,19 @@ outfile="tents"
 if [ `basename -- $0` != "$filename" ] #file being sourced
 	then
 		( echo $PATH | grep -q "$pathprefix" ) || export PATH="$pathprefix":$PATH
-		true #always succeed
 	else
-		allgood=true
+		set -e
 		
 		for filename in *.asm
 			do
 				if [ "$filename" != "*.asm" ]
 					then
-						$allgood && ( rasm "$filename" || allgood=false )
+						rasm "$filename"
 					else
 						echo "No asm files found!"
-						allgood=false
+						false #bail out!
 					fi
 			done
 		
-		$allgood && ( rlink -o "${outfile}.out" *.obj || allgood=false )
-		
-		$allgood #return proper exit status
+		rlink -o "${outfile}.out" *.obj
 	fi
