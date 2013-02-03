@@ -279,7 +279,38 @@ print_grid:
 	jal	print_hline
 	lw	$ra,0($sp)
 	
-	#print an extra newline:
+	#print the col expectations:
+	li	$v0,PRINT_STR
+	la	$a0,prntsc
+	syscall
+	li	$v0,PRINT_STR
+	la	$a0,prntsc
+	syscall
+	la	$s2,tentsc #the cols' expected values
+	move	$s1,$zero #current column index
+	print_expdcol:
+		#the meat of the matter:
+		li	$a0,1 #looking at columns
+		move	$a1,$s1 #our specific column
+		jal	get_expected #related expectation
+		lw	$ra,0($sp)
+		move	$a0,$v0
+		li	$v0,PRINT_INT
+		syscall
+		
+		#what we use to fill the empty spaces:
+		li	$v0,PRINT_STR
+		la	$a0,prntsc
+		syscall
+		
+		#where we used to talk:
+		addi	$s1,$s1,1
+		bne	$s1,$s0,print_expdcol #until we've hit each one
+	
+	#print extra newlines:
+	li	$v0,PRINT_STR
+	la	$a0,prntnl
+	syscall
 	li	$v0,PRINT_STR
 	la	$a0,prntnl
 	syscall
