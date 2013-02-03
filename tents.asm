@@ -7,6 +7,7 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	print_grid
 
 # The symbol representing an undecided space.
 SYMB_UNK = 32 #" "
@@ -93,6 +94,9 @@ main:
 			j	expect
 	expect_done:
 	
+	#print the initial board:
+	jal	print_grid
 	lw	$ra,0($sp)
+	
 	addi	$sp,$sp,4
 	jr	$ra

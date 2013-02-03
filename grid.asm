@@ -6,12 +6,16 @@
 .globl	len_grid
 .globl	set_expected
 .globl	set_expected
+.globl	print_grid
 
 # The minimum edge length of the square grid.
 MIN_LEN = 2
 
 # The maximum edge length of the square grid.
 MAX_LEN = 12
+
+# The system call for printing a string.
+PRINT_STR = 4
 
 .data
 .align 2
@@ -29,6 +33,14 @@ tentsr:	# word[] - The number of tents in each row.
 .align 2
 tentsc: # word[] - The number of tents in each column.
 	.space	MAX_LEN*4
+
+.align 2
+prntq:	# A holding location for char-strings before they're printed.
+	.byte	0
+	.byte	0
+.align 2
+prntnl: # A reserved NL string for whenever we need it.
+	.asciiz "\n"
 
 .text
 .align 2
@@ -121,4 +133,38 @@ get_expected:
 	mul	$a1,$a1,4
 	add	$t0,$t0,$a1
 	lw	$v0,0($t0)
+	jr	$ra
+
+# Print out the grid.
+# This should only be called after all set_expected calls.
+print_grid:
+	la	$t4,len
+	lw	$t4,0($t4) #grab the length
+	la	$t5,prntq #grab the null-terminated holding place
+	mul	$t0,$t4,$t4
+	la	$t2,vals #current row pointer
+	add	$t0,$t2,$t0 #end-of-grid pointer
+	#break
+	printr: #iterate over rows
+		move	$t3,$t2 #current col pointer
+		add	$t1,$t3,$t4 #end-of-row pointer
+		printc: #iterate over cols
+			li	$v0,PRINT_STR
+			lb	$a0,0($t3) #character to print
+			sb	$a0,0($t5) #put in front of a NULL
+			move	$a0,$t5
+			syscall
+			addi	$t3,$t3,1
+			bne	$t3,$t1,printc #until out of cols
+		li	$v0,PRINT_STR
+		la	$a0,prntnl
+		syscall
+		move	$t2,$t1
+		bne	$t2,$t0,printr #until out of rows
+	
+	#print an extra newline:
+	li	$v0,PRINT_STR
+	la	$a0,prntnl
+	syscall
+	
 	jr	$ra
