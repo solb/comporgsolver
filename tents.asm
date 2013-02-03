@@ -51,8 +51,11 @@ err_4:
 .align 2
 
 main:
-	addi	$sp,$sp,-4
+	addi	$sp,$sp,-16
 	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
 	
 	#print a pretty banner:
 	li	$v0,PRINT_STR
@@ -151,5 +154,8 @@ main:
 	jal	print_grid
 	lw	$ra,0($sp)
 	
-	addi	$sp,$sp,4
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	addi	$sp,$sp,16
 	jr	$ra
