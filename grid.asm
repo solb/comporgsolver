@@ -14,6 +14,15 @@ MIN_LEN = 2
 # The maximum edge length of the square grid.
 MAX_LEN = 12
 
+# The character used for the corners of the boarder.
+BRDR_CRNR = 43 #"+"
+
+# The character used for the horizontal border edges.
+BRDR_HORZ = 45 #"-"
+
+# The character used for the vertical border edges.
+BRDR_VERT = 124 #"|"
+
 # The system call for printing a string.
 PRINT_STR = 4
 
@@ -41,6 +50,9 @@ prntq:	# A holding location for char-strings before they're printed.
 .align 2
 prntnl: # A reserved NL string for whenever we need it.
 	.asciiz "\n"
+.align 2
+prntsc:	# A reserved space string for whenever we need it.
+	.asciiz " "
 
 .text
 .align 2
@@ -135,36 +147,129 @@ get_expected:
 	lw	$v0,0($t0)
 	jr	$ra
 
+# Print out a horizontal border line.
+# This forms the top and bottom of the cute frame around the board.
+# It should only be called if the s-registers are already set up as described.
+# @s 0 the grid's side length
+# @s 1 the null-terminated holding place to use
+print_hline:
+	#print a corner piece:
+	li	$t0,BRDR_CRNR
+	sb	$t0,0($s1)
+	li	$v0,PRINT_STR
+	move	$a0,$s1
+	syscall
+	
+	#print a horizontal piece:
+	li	$t0,BRDR_HORZ
+	sb	$t0,0($s1)
+	li	$v0,PRINT_STR
+	move	$a0,$s1
+	syscall
+	
+	#print the right number of horizontals
+	move	$t1,$zero #current index
+	printhz:
+		#print two more horizontals:
+		li	$v0,PRINT_STR
+		move	$a0,$s1
+		syscall
+		li	$v0,PRINT_STR
+		move	$a0,$s1
+		syscall
+		
+		addi	$t1,$t1,1
+		bne	$t1,$s0,printhz #until we've placed enough
+	
+	#print a corner piece:
+	li	$t0,BRDR_CRNR
+	sb	$t0,0($s1)
+	li	$v0,PRINT_STR
+	move	$a0,$s1
+	syscall
+	
+	#print a trailing newline:
+	li	$v0,PRINT_STR
+	la	$a0,prntnl
+	syscall
+	
+	jr	$ra
+
 # Print out the grid.
 # This should only be called after all set_expected calls.
 print_grid:
-	la	$t4,len
-	lw	$t4,0($t4) #grab the length
-	la	$t5,prntq #grab the null-terminated holding place
-	mul	$t0,$t4,$t4
+	addi	$sp,$sp,-12
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	
+	#pull in the needed resources:
+	la	$s0,len
+	lw	$s0,0($s0) #grab the length
+	la	$s1,prntq #grab the null-terminated holding place
+	
+	#print the top of the border:
+	jal	print_hline
+	lw	$ra,0($sp)
+	
+	#print the main body of the board:
+	mul	$t0,$s0,$s0
 	la	$t2,vals #current row pointer
 	add	$t0,$t2,$t0 #end-of-grid pointer
-	#break
 	printr: #iterate over rows
 		move	$t3,$t2 #current col pointer
-		add	$t1,$t3,$t4 #end-of-row pointer
+		add	$t1,$t3,$s0 #end-of-row pointer
+		
+		#print a buffered vertical piece:
+		li	$t7,BRDR_VERT
+		sb	$t7,0($s1)
+		li	$v0,PRINT_STR
+		move	$a0,$s1
+		syscall
+		li	$v0,PRINT_STR
+		la	$a0,prntsc
+		syscall
+		
 		printc: #iterate over cols
+			#print each character and a trailing space
 			li	$v0,PRINT_STR
 			lb	$t6,0($t3) #character to print
-			sb	$t6,0($t5) #put in front of a NULL
-			move	$a0,$t5
+			sb	$t6,0($s1) #put in front of a NULL
+			move	$a0,$s1
 			syscall
+			li	$v0,PRINT_STR
+			la	$a0,prntsc
+			syscall
+			
 			addi	$t3,$t3,1
 			bne	$t3,$t1,printc #until out of cols
+		
+		#print a buffered vertical piece:
+		li	$t7,BRDR_VERT
+		sb	$t7,0($s1)
+		li	$v0,PRINT_STR
+		move	$a0,$s1
+		syscall
+		li	$v0,PRINT_STR
+		la	$a0,prntsc
+		syscall
 		li	$v0,PRINT_STR
 		la	$a0,prntnl
 		syscall
+		
 		move	$t2,$t1
 		bne	$t2,$t0,printr #until out of rows
+	
+	#print the bottom of the border:
+	jal	print_hline
+	lw	$ra,0($sp)
 	
 	#print an extra newline:
 	li	$v0,PRINT_STR
 	la	$a0,prntnl
 	syscall
 	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	addi	$sp,$sp,12
 	jr	$ra
