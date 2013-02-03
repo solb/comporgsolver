@@ -35,7 +35,9 @@ tentsc: # word[] - The number of tents in each column.
 
 # Constructor.
 # Initialize a grid of the specified dimensions.
+# The provided character is used to populate the grid's contents.
 # @a 0 size (edge length)
+# @a 1 byte - initial fill character
 # @v 0 1 for success, 0 for invalid size
 init_grid:
 	#if(size>=MIN_LEN && size<=MAX_LEN)
@@ -47,8 +49,23 @@ init_grid:
 	sle	$v0,$a0,MAX_LEN
 	and	$v0,$t0,$v0 #must be within both bounds
 	beq	$v0,$zero,bad_len
+		#save the length:
 		la	$t0,len
 		sw	$a0,0($t0)
+		
+		#initialize our contents:
+		mul	$t0,$a0,$a0
+		la	$t2,vals #current row pointer
+		add	$t0,$t2,$t0 #end-of-grid pointer
+		initr: #iterate over rows
+			move	$t3,$t2 #current col pointer
+			add	$t1,$t3,$a0 #end-of-row pointer
+			initc: #iterate over cols
+				sb	$a1,0($t3)
+				addi	$t3,$t3,1
+				bne	$t3,$t1,initc #until out of cols
+			move	$t2,$t1
+			bne	$t2,$t0,initr #until out of rows
 	bad_len:
 	
 	jr	$ra

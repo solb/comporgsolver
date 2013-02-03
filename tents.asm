@@ -8,6 +8,18 @@
 .globl	set_expected
 .globl	get_expected
 
+# The symbol representing an undecided space.
+SYMB_UNK = 32 #" "
+
+# The symbol representing a definitely empty space.
+SYMB_EMPT = 46 #"."
+
+# The symbol representing a tree space.
+SYMB_TREE = 84 #"T"
+
+# The symbol representing a tent space.
+SYMB_TENT = 65 #"A"
+
 # The system call for reading an int.
 READ_INT = 5
 
@@ -34,6 +46,7 @@ main:
 	li	$v0,READ_INT
 	syscall
 	move	$a0,$v0
+	li	$a1,SYMB_EMPT
 	jal	init_grid
 	lw	$ra,0($sp)
 	bne	$v0,$zero,ok_size #if out of range
