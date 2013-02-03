@@ -23,6 +23,9 @@ BRDR_HORZ = 45 #"-"
 # The character used for the vertical border edges.
 BRDR_VERT = 124 #"|"
 
+# The system call for printing an int.
+PRINT_INT = 1
+
 # The system call for printing a string.
 PRINT_STR = 4
 
@@ -198,15 +201,17 @@ print_hline:
 # Print out the grid.
 # This should only be called after all set_expected calls.
 print_grid:
-	addi	$sp,$sp,-12
+	addi	$sp,$sp,-16
 	sw	$ra,0($sp)
 	sw	$s0,4($sp)
 	sw	$s1,8($sp)
+	sw	$s2,12($sp)
 	
 	#pull in the needed resources:
 	la	$s0,len
 	lw	$s0,0($s0) #grab the length
 	la	$s1,prntq #grab the null-terminated holding place
+	la	$s2,tentsr #grab the rows' expected values
 	
 	#print the top of the border:
 	jal	print_hline
@@ -253,6 +258,16 @@ print_grid:
 		li	$v0,PRINT_STR
 		la	$a0,prntsc
 		syscall
+		
+		#print the row expectation and return:
+		li	$v0,PRINT_INT
+		sub	$a0,$t0,$t2
+		div	$a0,$a0,$s0
+		sub	$a0,$s0,$a0 #our index: len-(end-row)/len
+		mul	$a0,$a0,4 #moving from byte to word addressing
+		add	$a0,$s2,$a0 #use as offset from expectedr's start
+		lw	$a0,0($a0)
+		syscall
 		li	$v0,PRINT_STR
 		la	$a0,prntnl
 		syscall
@@ -271,5 +286,6 @@ print_grid:
 	
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)
-	addi	$sp,$sp,12
+	lw	$s2,12($sp)
+	addi	$sp,$sp,16
 	jr	$ra
