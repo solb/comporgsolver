@@ -7,6 +7,7 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	set_coordinate
 .globl	print_grid
 
 # The symbol representing an undecided space.
@@ -41,6 +42,10 @@ err_1:
 	.asciiz	"Invalid board size, Tents terminating\n"
 err_2:
 	.asciiz	"Illegal sum value, Tents terminating\n"
+err_3:
+	.asciiz "Illegal number of trees, Tents terminating\n"
+err_4:
+	.asciiz "Illegal tree location, Tents terminating\n"
 
 .text
 .align 2
@@ -102,6 +107,42 @@ main:
 			move	$s2,$zero #from the top---err, left
 			j	expect
 	expect_done:
+	
+	#add trees:
+	li	$v0,READ_INT
+	syscall
+	move	$s1,$v0 #now holds number of trees
+	slt	$t0,$s1,$zero
+	beq	$t0,$zero,ok_numtrees #if numtrees *is* negative
+		li	$v0,PRINT_STR
+		la	$a0,err_3
+		syscall
+		jr	$ra #bail out!
+	ok_numtrees:
+	move	$s2,$zero #now holds the current index
+	j	plantfeet #while instead of do-while
+	plantanother:
+		#get the user's coordinate pair:
+		li	$v0,READ_INT
+		syscall
+		move	$t0,$v0
+		li	$v0,READ_INT
+		syscall
+		
+		addi	$s2,$s2,1
+		#prepare and check it for resale:
+		move	$a0,$t0
+		move	$a1,$v0
+		li	$a2,SYMB_TREE #it's a tree we're planting
+		jal	set_coordinate
+		lw	$ra,0($sp)
+		bne	$v0,$zero,plantfeet #if unreasonable
+			li	$v0,PRINT_STR
+			la	$a0,err_4
+			syscall
+			jr	$ra #bail out!
+		plantfeet: #incrementation loop bound-checking
+		bne	$s2,$s1,plantanother #until we've collected enough
 	
 	#print the initial board:
 	li	$v0,PRINT_STR
