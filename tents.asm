@@ -8,10 +8,11 @@
 .globl	set_expected
 .globl	get_expected
 .globl	set_coordinate
+.globl	get_coordinate
 .globl	print_grid
 
 # The symbol representing an undecided space.
-SYMB_UNK = 32 #" "
+SYMB_UNK = 95 #"_"
 
 # The symbol representing a definitely empty space.
 SYMB_EMPT = 46 #"."

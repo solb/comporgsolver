@@ -7,6 +7,7 @@
 .globl	set_expected
 .globl	get_expected
 .globl	set_coordinate
+.globl	get_coordinate
 .globl	print_grid
 
 # The minimum edge length of the square grid.
@@ -177,6 +178,19 @@ set_coordinate:
 		sb	$a2,0($t0)
 	bad_coords:
 	
+	jr	$ra
+
+# @a0 the row coordinate
+# @a1 the column coordinate
+# @v0 byte - the value retrieved
+get_coordinate:
+	la	$t0,len
+	lw	$t0,0($t0) #pull in length
+	mul	$a0,$a0,$t0 #rows are major
+	la	$t0,vals #address of grid itself
+	add	$t0,$t0,$a0
+	add	$t0,$t0,$a1 #cols are minor
+	lb	$v0,0($t0)
 	jr	$ra
 
 # Print out a horizontal border line.
