@@ -7,6 +7,7 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	validate_coords
 .globl	set_coordinate
 .globl	get_coordinate
 .globl	print_grid

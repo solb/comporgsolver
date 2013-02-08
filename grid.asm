@@ -6,6 +6,7 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	validate_coords
 .globl	set_coordinate
 .globl	get_coordinate
 .globl	print_grid
@@ -150,6 +151,25 @@ get_expected:
 	mul	$a1,$a1,4
 	add	$t0,$t0,$a1
 	lw	$v0,0($t0)
+	jr	$ra
+
+# Checks a coordinate pair for validity
+# @a 0 row coordinate
+# @a 1 column coordinate
+# @v 0 1 for valid, 0 for out-of-bounds
+validate_coords:
+	la	$t0,len
+	lw	$t0,0($t0)
+	
+	#check provided coordinates:
+	sge	$t1,$a0,$zero
+	slt	$t2,$a0,$t0
+	and	$v0,$t1,$t2
+	sge	$t1,$a1,$zero
+	slt	$t2,$a1,$t0
+	and	$v0,$v0,$t1
+	and	$v0,$v0,$t2
+	
 	jr	$ra
 
 # @a 0 row coordinate
