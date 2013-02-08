@@ -11,6 +11,8 @@
 .globl	set_coordinate
 .globl	get_coordinate
 .globl	print_grid
+.globl	next_tent
+.globl	init_trees
 
 # The symbol representing an undecided space.
 SYMB_UNK = 95 #"_"
@@ -148,6 +150,13 @@ main:
 			jr	$ra #bail out!
 		plantfeet: #incrementation loop bound-checking
 		bne	$s2,$s1,plantanother #until we've collected enough
+	
+	#initialize tree structures and find possible tents:
+	li	$a0,SYMB_TREE #tree
+	li	$a1,SYMB_EMPT #empty
+	li	$a2,SYMB_UNK #undetermined
+	jal	init_trees
+	lw	$ra,0($sp)
 	
 	#print the initial board:
 	li	$v0,PRINT_STR

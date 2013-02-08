@@ -10,6 +10,8 @@
 .globl	set_coordinate
 .globl	get_coordinate
 .globl	print_grid
+.globl	next_tent
+.globl	init_trees
 
 # The minimum edge length of the square grid.
 MIN_LEN = 2
@@ -25,6 +27,12 @@ BRDR_HORZ = 45 #"-"
 
 # The character used for the vertical border edges.
 BRDR_VERT = 124 #"|"
+
+# The (exclusive) ceiling indicating a tent.
+UPPER_TENT = 5
+
+# The zero character for tent translations.
+ZERO_TENT = 48
 
 # The system call for printing an int.
 PRINT_INT = 1
@@ -302,6 +310,12 @@ print_grid:
 			#print each character and a trailing space
 			li	$v0,PRINT_STR
 			lb	$t6,0($t3) #character to print
+			
+			#convert into a number if necessary:
+			slti	$t7,$t6,UPPER_TENT
+			beq	$t7,$zero,isnttree #if an rotating tree
+				addi	$t6,$t6,ZERO_TENT
+			isnttree:
 			sb	$t6,0($s1) #put in front of a NULL
 			move	$a0,$s1
 			syscall
@@ -382,4 +396,263 @@ print_grid:
 	lw	$s1,8($sp)
 	lw	$s2,12($sp)
 	addi	$sp,$sp,16
+	jr	$ra
+
+# Determines the tent corresponding to a tree's current state
+# @a 0 the row coordinate of the TREE
+# @a 1 the column coordinate of the TREE
+# @v 0 the row coordinate of the TENT (or -1 if no tent)
+# @v 1 the column coordinate of the TENT (or -1 if no tent)
+find_tent_by_tree:
+	addi	$sp,$sp,-12
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	
+	#get the tree's counter state:
+	move	$s0,$a0 #row
+	move	$s1,$a1 #col
+	jal	get_coordinate
+	lw	$ra,0($sp)
+	move	$t0,$v0 #the tree's state
+
+	#preload return values with tree coordinates:
+	move	$v0,$s0 #row
+	move	$v1,$s1 #col
+	
+	move	$t1,$zero #the current case being checked
+	bne	$t0,$t1,side1 #if no side
+		#use sentinels:
+		li	$v0,-1
+		li	$v1,-1
+		j	checked #no need to recheck
+	side1:
+	addi	$t1,$t1,1
+	bne	$t0,$t1,side2 #else if side 1
+		#go right:
+		addi	$v0,$s0,0
+		addi	$v1,$s1,1
+		j	desided
+	side2:
+	addi	$t1,$t1,1
+	bne	$t0,$t1,side3 #else if side 2
+		#go down:
+		addi	$v0,$s0,1
+		addi	$v1,$s1,0
+		j	desided
+	side3:
+	addi	$t1,$t1,1
+	bne	$t0,$t1,side4 #else if side 3
+		#go left:
+		addi	$v0,$s0,0
+		addi	$v1,$s1,-1
+		j	desided
+	side4:
+	#else side 4
+		#go up:
+		addi	$v0,$s0,-1
+		addi	$v1,$s1,0
+	desided:
+	
+	#retrieve length:
+	la	$t2,len
+	lw	$t2,0($t2)
+	
+	#check lower bounds:
+	slt	$t0,$s0,$zero
+	slt	$t1,$s1,$zero
+	or	$t0,$t0,$t1
+	
+	#check upper bounds:
+	sge	$t1,$s0,$t2
+	sge	$t2,$s1,$t2
+	or	$t1,$t1,$t2
+	
+	#use sentinels if they're off the edge:
+	or	$t0,$t0,$t1
+	beq	$t0,$zero,checked #if coordinates invalid
+		li	$v0,-1
+		li	$v1,-1
+	checked:
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	addi	$sp,$sp,12
+	jr	$ra
+
+# Moves a tree's tent to the next possible place, if possible.
+# If there is no possible next state, the tree is reset to having no tents.
+# @a 0 the row coordinate of the TREE
+# @a 1 the column coordinate of the TREE
+# @a 2 the indeterminate symbol
+# @a 3 the tent symbol
+# @v 0 whether the operation was successful (there was another state)
+next_tent:
+	addi	$sp,$sp,-24
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	
+	move	$s0,$a0 #tree row
+	move	$s1,$a1	#tree col
+	move	$s2,$a2 #indeterminate symbol
+	move	$s3,$a3 #tent symbol
+	
+	#get rid of the old:
+	jal	find_tent_by_tree
+	lw	$ra,0($sp)
+	slt	$t3,$v0,$zero
+	bne	$t3,$zero,notentyet #if there is a tent
+		move	$a0,$v0 #row
+		move	$a1,$v1 #col
+		move	$a2,$s2 #we'll erase that tent
+		jal	set_coordinate
+		lw	$ra,0($sp)
+	notentyet:
+	
+	#retrieve the current tree state:
+	move	$a0,$s0 #row
+	move	$a1,$s1 #col
+	jal	get_coordinate
+	lw	$ra,0($sp)
+	move	$s4,$v0 #s4 holds the tree's tent rotation
+	
+	tryincrement: #do
+		#increment the state:
+		addi	$s4,$s4,1
+		rem	$s4,$s4,5
+		move	$a0,$s0 #row
+		move	$a1,$s1 #col
+		move	$a2,$s4 #new value
+		jal	set_coordinate
+		lw	$ra,0($sp)
+		
+		#break if rotation finished:
+		move	$v0,$zero #assume failure
+		bne	$s4,$zero,skiptent #it did
+		
+		move	$a0,$s0 #row
+		move	$a1,$s1 #col
+		jal	get_coordinate
+		lw	$ra,0($sp)
+		beq	$v0,$s2,planttent #until we find an available spot
+		j	tryincrement
+	
+	planttent: #if we found an availability:
+	move	$a0,$s0 #row
+	move	$a1,$s1 #col
+	move	$a2,$s3 #place a tent
+	li	$v0,1 #we've had a little bit of luck
+	skiptent:
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	addi	$sp,$sp,24
+
+# Initializes the trees to empty-tent states.
+# Also marks the surrounding spaces as unknown (possible tents).
+# @a 0 the symbol for trees
+# @a 1 the symbol for emptiness
+# @a 2 the symbol for undetermined spaces
+init_trees:
+	addi	$sp,$sp,-28
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	sw	$s5,24($sp)
+	
+	move	$s0,$a0 #tree symb
+	move	$s1,$a1 #empty symb
+	move	$s2,$a2 #unk symb
+	move	$s3,$zero #row index
+	move	$s4,$zero #column index
+	initree:
+		move	$a0,$s3 #row
+		move	$a1,$s4 #col
+		jal	get_coordinate
+		lw	$ra,0($sp)
+		bne	$v0,$s0,notatree #if we hit a tree:
+			#convert from symbol to numeric notation:
+			move	$a0,$s3 #row
+			move	$a1,$s4 #col
+			move	$a2,$zero #record no tent
+			jal	set_coordinate
+			lw	$ra,0($sp)
+			
+			#loop through the adjacent spaces:
+			move	$s5,$zero #now contains the tent rotation
+			noteopenings: #do
+				#increment the tree's counter:
+				addi	$s5,$s5,1
+				rem	$s5,$s5,5
+				move	$a0,$s3 #row
+				move	$a1,$s4 #col
+				move	$a2,$s5 #rotation
+				jal	set_coordinate
+				lw	$ra,0($sp)
+				beq	$s5,$zero,donepopping #finished yet?
+				
+				#find its current tent coordinates:
+				move	$a0,$s3 #row
+				move	$a1,$s4 #col
+				jal	find_tent_by_tree
+				lw	$ra,0($sp)
+				move	$s6,$v0 #now contains tent row
+				move	$s7,$v1 #now contains tent col
+				
+				#check whether location is valid and empty:
+				slt	$t0,$s6,$zero #out-of-bounds?
+				bne	$t0,$zero,noteopenings
+				move	$a0,$s6 #tent row
+				move	$a1,$s7 #tent col
+				jal	get_coordinate
+				lw	$ra,0($sp)
+				bne	$v0,$s1,noteopenings #spot already taken?
+				
+				#check whether its row and column are clear:
+				move	$a0,$zero #operate on rows
+				move	$a1,$s6 #tent row
+				jal	get_expected
+				lw	$ra,0($sp)
+				beq	$v0,$zero,noteopenings #row empty?
+				li	$a0,1 #operate on cols
+				move	$a1,$s7 #tent col
+				jal	get_expected
+				lw	$ra,0($sp)
+				beq	$v0,$zero,noteopenings #col empty?
+				
+				#populate the location
+				move	$a0,$s6 #tent row
+				move	$a1,$s7 #tent col
+				move	$a2,$s2 #open for use
+				jal	set_coordinate
+				lw	$ra,0($sp)
+				j	noteopenings #check the rest of the adjacents
+			donepopping:
+		notatree:
+		addi	$s4,$s4,1 #advance column
+		la	$t0,len
+		lw	$t0,0($t0) #now holds length
+		bne	$s4,$t0,continuerow #if past the last column
+			addi	$s3,$s3,1 #advance row
+			move	$s4,$zero #reset column
+		continuerow:
+		bne	$s3,$t0,initree #while not past last row
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	lw	$s5,24($sp)
+	addi	$sp,$sp,28
 	jr	$ra
