@@ -4,7 +4,7 @@ filename="maker"
 pathprefix=`echo ~wrc/bin`
 outfile="tents"
 
-if [ `basename -- $0` != "$filename" ] #file being sourced
+if [ `basename -- "$0"` != "$filename" ] #file being sourced
 	then
 		( echo $PATH | grep -q "$pathprefix" ) || export PATH="$pathprefix":$PATH
 	else
