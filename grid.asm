@@ -12,6 +12,7 @@
 .globl	print_grid
 .globl	next_tent
 .globl	init_trees
+.globl	iter_deref
 
 # The minimum edge length of the square grid.
 MIN_LEN = 2
@@ -58,7 +59,7 @@ tentsc: # word[] - The number of tents in each column.
 	.space	MAX_LEN*4
 
 .align 2
-tentit: # half[] - Pairs of coordinates corresponding to each tree.
+treeit: # half[] - Pairs of coordinates corresponding to each tree (ending -1,-1).
 	.space	MAX_LEN*MAX_LEN*2
 
 .align 2
@@ -581,6 +582,7 @@ init_trees:
 	move	$s2,$a2 #unk symb
 	move	$s3,$zero #row index
 	move	$s4,$zero #column index
+	la	$t8,treeit #pseudo--s-reg holding tree iterator
 	initree:
 		move	$a0,$s3 #row
 		move	$a1,$s4 #col
@@ -593,6 +595,11 @@ init_trees:
 			move	$a2,$zero #record no tent
 			jal	set_coordinate
 			lw	$ra,0($sp)
+			
+			#store this tent's coordinates in our iterator:
+			sh	$s3,0($t8) #row
+			sh	$s4,2($t8) #row
+			addi	$t8,$t8,4 #next pair
 			
 			#loop through the adjacent spaces:
 			move	$s5,$zero #now contains the tent rotation
@@ -654,6 +661,11 @@ init_trees:
 		continuerow:
 		bne	$s3,$t0,initree #while not past last row
 	
+	#close out tree iterator:
+	li	$t0,-1
+	sh	$t0,0($t8)
+	sh	$t0,2($t8)
+	
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)
 	lw	$s2,12($sp)
@@ -663,4 +675,24 @@ init_trees:
 	lw	$s6,28($sp)
 	lw	$s7,32($sp)
 	addi	$sp,$sp,36
+	jr	$ra
+
+# Grabs the coordinates of the tree under the iterator.
+# If we're just off the end, the coordinates will be (-1,-1).
+# @a 0 the iterator's position (0-based)
+# @v 0 the row-coordinate
+# @v 1 the column-coordinate
+iter_deref:
+	addi	$sp,$sp,-8
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	
+	la	$s0,treeit
+	mul	$a0,$a0,4 #move by coordinate *pairs*
+	add	$s0,$s0,$a0 #address of requested pair
+	lh	$v0,0($s0)
+	lh	$v1,2($s0)
+	
+	lw	$s0,4($sp)
+	addi	$sp,$sp,8
 	jr	$ra

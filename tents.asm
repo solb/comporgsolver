@@ -13,6 +13,7 @@
 .globl	print_grid
 .globl	next_tent
 .globl	init_trees
+.globl	iter_deref
 
 # The symbol representing an undecided space.
 SYMB_UNK = 95 #"_"
