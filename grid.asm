@@ -58,6 +58,10 @@ tentsc: # word[] - The number of tents in each column.
 	.space	MAX_LEN*4
 
 .align 2
+tentit: # half[] - Pairs of coordinates corresponding to each tree.
+	.space	MAX_LEN*MAX_LEN*2
+
+.align 2
 prntq:	# A holding location for char-strings before they're printed.
 	.byte	0
 	.byte	0
@@ -561,7 +565,7 @@ next_tent:
 # @a 1 the symbol for emptiness
 # @a 2 the symbol for undetermined spaces
 init_trees:
-	addi	$sp,$sp,-28
+	addi	$sp,$sp,-36
 	sw	$ra,0($sp)
 	sw	$s0,4($sp)
 	sw	$s1,8($sp)
@@ -569,6 +573,8 @@ init_trees:
 	sw	$s3,16($sp)
 	sw	$s4,20($sp)
 	sw	$s5,24($sp)
+	sw	$s6,28($sp)
+	sw	$s7,32($sp)
 	
 	move	$s0,$a0 #tree symb
 	move	$s1,$a1 #empty symb
@@ -654,5 +660,7 @@ init_trees:
 	lw	$s3,16($sp)
 	lw	$s4,20($sp)
 	lw	$s5,24($sp)
-	addi	$sp,$sp,28
+	lw	$s6,28($sp)
+	lw	$s7,32($sp)
+	addi	$sp,$sp,36
 	jr	$ra
