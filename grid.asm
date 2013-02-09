@@ -493,13 +493,15 @@ find_tent_by_tree:
 # @a 3 the tent symbol
 # @v 0 whether the operation was successful (there was another state)
 next_tent:
-	addi	$sp,$sp,-24
+	addi	$sp,$sp,-32
 	sw	$ra,0($sp)
 	sw	$s0,4($sp)
 	sw	$s1,8($sp)
 	sw	$s2,12($sp)
 	sw	$s3,16($sp)
 	sw	$s4,20($sp)
+	sw	$s5,24($sp)
+	sw	$s6,28($sp)
 	
 	move	$s0,$a0 #tree row
 	move	$s1,$a1	#tree col
@@ -537,19 +539,30 @@ next_tent:
 		
 		#break if rotation finished:
 		move	$v0,$zero #assume failure
-		bne	$s4,$zero,skiptent #it did
+		beq	$s4,$zero,skiptent #it did
 		
+		#locate where our tent might go:
 		move	$a0,$s0 #row
 		move	$a1,$s1 #col
+		jal	find_tent_by_tree
+		lw	$ra,0($sp)
+		move	$s5,$v0 #now holds TENT row
+		move	$s6,$v1 #now holds TENT col
+		
+		#check whether that spot is already taken:
+		move	$a0,$s5 #TENT row
+		move	$a1,$s6 #TENT col
 		jal	get_coordinate
 		lw	$ra,0($sp)
 		beq	$v0,$s2,planttent #until we find an available spot
 		j	tryincrement
 	
 	planttent: #if we found an availability:
-	move	$a0,$s0 #row
-	move	$a1,$s1 #col
+	move	$a0,$s5 #TENT row
+	move	$a1,$s6 #TENT col
 	move	$a2,$s3 #place a tent
+	jal	set_coordinate
+	lw	$ra,0($sp)
 	li	$v0,1 #we've had a little bit of luck
 	skiptent:
 	
@@ -558,7 +571,9 @@ next_tent:
 	lw	$s2,12($sp)
 	lw	$s3,16($sp)
 	lw	$s4,20($sp)
-	addi	$sp,$sp,24
+	sw	$s5,24($sp)
+	sw	$s6,28($sp)
+	addi	$sp,$sp,32
 
 # Initializes the trees to empty-tent states.
 # Also marks the surrounding spaces as unknown (possible tents).

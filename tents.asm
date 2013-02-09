@@ -166,6 +166,19 @@ main:
 	jal	print_grid
 	lw	$ra,0($sp)
 	
+	#test out next_tent
+	move	$a0,$zero #iterator at first tent
+	jal	iter_deref
+	lw	$ra,0($sp)
+	move	$a0,$v0
+	move	$a1,$v1
+	li	$a2,SYMB_UNK
+	li	$a3,SYMB_TENT
+	jal	next_tent
+	lw	$ra,0($sp)
+	jal	print_grid
+	lw	$ra,0($sp)
+	
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)
 	lw	$s2,12($sp)
