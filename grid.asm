@@ -403,6 +403,73 @@ print_grid:
 	addi	$sp,$sp,16
 	jr	$ra
 
+# Checks whether a coordinate pair is adjacent (including diagonally) to a symbol.
+# @a 0 the row coordinate
+# @a 1 the column coordiante
+# @a 2 the symbol
+# @v 0 whether it is adjacent
+coord_adjacency:
+	addi	$sp,$sp,-28
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	sw	$s5,24($sp)
+	
+	move	$s0,$a0 #base row
+	move	$s1,$a1 #base col
+	move	$s2,$a2 #symb
+	li	$s3,2 #max offset
+	li	$s4,-1 #row offset
+	outer:
+		li	$s5,-1 #col offset
+		checkadj:
+			#don't compare given coordinates to themselves:
+			seq	$t0,$s4,$zero
+			seq	$t1,$s5,$zero
+			and	$t0,$t0,$t1
+			bne	$t0,$zero,skip #continue if on coordinates themselves
+			
+			#don't follow coordinates off the map:
+			add	$a0,$s0,$s4 #calc row
+			add	$a1,$s1,$s5 #calc col
+			jal	validate_coords
+			lw	$ra,0($sp)
+			beq	$v0,$zero,skip #continue if out-of-bounds
+			
+			#finish if the target character was found:
+			add	$a0,$s0,$s4 #calc row
+			add	$a1,$s1,$s5 #calc col
+			jal	get_coordinate
+			lw	$ra,0($sp)
+			beq	$v0,$s2,yesitis #break if adjacency found
+			
+			#increment and condition:
+			skip:
+			addi	$s5,$s5,1
+			bne	$s5,$s3,checkadj #until done with row
+		#increment and condition:
+		addi	$s4,$s4,1
+		bne	$s4,$s3,outer #until done with rows
+	#we made it through, so it isn't adjacent:
+	move	$v0,$zero
+	j	noitisnt
+	
+	yesitis: #adjacent
+		li	$v0,1
+	noitisnt:
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	lw	$s5,24($sp)
+	addi	$sp,$sp,28
+	jr	$ra
+
 # Determines the tent corresponding to a tree's current state
 # @a 0 the row coordinate of the TREE
 # @a 1 the column coordinate of the TREE
@@ -561,7 +628,15 @@ next_tent:
 		move	$a1,$s6 #TENT col
 		jal	get_coordinate
 		lw	$ra,0($sp)
-		beq	$v0,$s2,planttent #until we find an available spot
+		bne	$v0,$s2,tryincrement
+		
+		#check whether there are already adjacent tents:
+		move	$a0,$s5 #TENT row
+		move	$a1,$s6 #TENT col
+		move	$a2,$s3 #tent symbol
+		jal	coord_adjacency
+		lw	$ra,0($sp)
+		beq	$v0,$zero,planttent #no adjacency found
 		j	tryincrement
 	
 	planttent: #if we found an availability:
