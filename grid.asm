@@ -574,6 +574,7 @@ next_tent:
 	sw	$s5,24($sp)
 	sw	$s6,28($sp)
 	addi	$sp,$sp,32
+	jr	$ra
 
 # Initializes the trees to empty-tent states.
 # Also marks the surrounding spaces as unknown (possible tents).
