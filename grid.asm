@@ -549,6 +549,13 @@ next_tent:
 		move	$s5,$v0 #now holds TENT row
 		move	$s6,$v1 #now holds TENT col
 		
+		#check whether we're out-of-bounds:
+		move	$a0,$s5 #TENT row
+		move	$a1,$s6 #TENT col
+		jal	validate_coords
+		lw	$ra,0($sp)
+		beq	$v0,$zero,tryincrement
+		
 		#check whether that spot is already taken:
 		move	$a0,$s5 #TENT row
 		move	$a1,$s6 #TENT col
