@@ -166,18 +166,29 @@ main:
 	jal	print_grid
 	lw	$ra,0($sp)
 	
-	#test out next_tent
-	move	$a0,$zero #iterator at first tent
-	jal	iter_deref
-	lw	$ra,0($sp)
-	move	$a0,$v0
-	move	$a1,$v1
-	li	$a2,SYMB_UNK
-	li	$a3,SYMB_TENT
-	jal	next_tent
-	lw	$ra,0($sp)
-	jal	print_grid
-	lw	$ra,0($sp)
+	#perform the backtracking:
+	# s0 now contains the board's side length
+	# s1 now contains the number of trees
+	move	$s2,$zero #now contains our tree iterator
+	backtrack: #do
+		move	$a0,$s2
+		jal	iter_deref
+		lw	$ra,0($sp)
+		move	$a0,$v0
+		move	$a1,$v1
+		li	$a2,SYMB_UNK
+		li	$a3,SYMB_TENT
+		jal	next_tent
+		lw	$ra,0($sp)
+		jal	print_grid
+		lw	$ra,0($sp)
+		beq	$v0,$zero,backup #if there was a valid state
+			addi	$s2,$s2,1
+			j incremented
+		backup: #else we need to step backward
+			addi	$s2,$s2,-1
+		incremented:
+	bne	$s2,$s1,backtrack #while not done
 	
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)
