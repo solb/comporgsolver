@@ -179,6 +179,7 @@ main:
 	#perform the backtracking:
 	# s0 now contains the board's side length
 	# s1 now contains the number of trees
+	beq	$s1,$zero,possible #empty puzzles mustn't go through the solver
 	move	$s2,$zero #now contains our tree iterator
 	backtrack: #do
 		move	$a0,$s2
@@ -206,19 +207,20 @@ main:
 	lw	$ra,0($sp)
 	beq	$v0,$zero,backup #retry if invalid
 	
-	#print the valid board:
-	li	$v0,PRINT_STR
-	la	$a0,out_3
-	syscall
-	#move	$a0,$zero
-	li	$a0,SYMB_TREE
-	li	$a1,SYMB_UNK
-	li	$a2,SYMB_EMPT
-	jal	print_grid
-	lw	$ra,0($sp)
-	j	probable
-	
+	possible:
+		#print the valid board:
+		li	$v0,PRINT_STR
+		la	$a0,out_3
+		syscall
+		#move	$a0,$zero
+		li	$a0,SYMB_TREE
+		li	$a1,SYMB_UNK
+		li	$a2,SYMB_EMPT
+		jal	print_grid
+		lw	$ra,0($sp)
+		j	probable
 	impossible:
+		#alert the user:
 		li	$v0,PRINT_STR
 		la	$a0,err_5
 		syscall
