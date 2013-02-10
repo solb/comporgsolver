@@ -7,6 +7,8 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	count_up_group
+.globl	validate_board
 .globl	validate_coords
 .globl	set_coordinate
 .globl	get_coordinate
@@ -51,6 +53,8 @@ err_3:
 	.asciiz "Illegal number of trees, Tents terminating\n"
 err_4:
 	.asciiz "Illegal tree location, Tents terminating\n"
+err_5:
+	.asciiz "Impossible Puzzle\n"
 
 .text
 .align 2
@@ -180,15 +184,33 @@ main:
 		li	$a3,SYMB_TENT
 		jal	next_tent
 		lw	$ra,0($sp)
-		jal	print_grid
-		lw	$ra,0($sp)
+#		jal	print_grid
+#		lw	$ra,0($sp)
 		beq	$v0,$zero,backup #if there was a valid state
 			addi	$s2,$s2,1
 			j incremented
 		backup: #else we need to step backward
 			addi	$s2,$s2,-1
+			slt	$t0,$s2,$zero
+			bne	$t0,$zero,impossible
 		incremented:
 	bne	$s2,$s1,backtrack #while not done
+	
+	jal	print_grid
+	lw	$ra,0($sp)
+	
+	#check our work:
+	li	$a0,SYMB_TENT
+	jal	validate_board
+	lw	$ra,0($sp)
+	beq	$v0,$zero,backup #retry if invalid
+	j	probable
+	
+	impossible:
+		li	$v0,PRINT_STR
+		la	$a0,err_5
+		syscall
+	probable:
 	
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)

@@ -6,6 +6,8 @@
 .globl	len_grid
 .globl	set_expected
 .globl	get_expected
+.globl	count_up_group
+.globl	validate_board
 .globl	validate_coords
 .globl	set_coordinate
 .globl	get_coordinate
@@ -150,8 +152,8 @@ set_expected:
 	jr	$ra
 
 # @a 0 0 for row, 1 for column
-# @a 1 row of interest
-# @v 0 expected number of tents in that row
+# @a 1 row/column of interest
+# @v 0 expected number of tents in that row/column
 get_expected:
 	#get the address of the row or col expectations:
 	bne	$a0,$zero,exgcol
@@ -164,6 +166,113 @@ get_expected:
 	mul	$a1,$a1,4
 	add	$t0,$t0,$a1
 	lw	$v0,0($t0)
+	jr	$ra
+
+# Counts the number of tents in a row or column.
+# @a 0 0 for row, 1 for column
+# @a 1 row/column of interest
+# @a 2 the symbol for tents
+# @v 0 the tent count
+count_up_group:
+	addi	$sp,$sp,-28
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	sw	$s5,24($sp)
+	
+	move	$s0,$a0 #row or col
+	move	$s1,$a1 #group id
+	la	$s2,len
+	lw	$s2,0($s2) #length
+	move	$s3,$zero #index
+	move	$s4,$zero #counter
+	move	$s5,$a2 #tent symb
+	covergroup: #do
+		bne	$s0,$zero,oponcol #if operating on row
+			move	$a0,$s1
+			move	$a1,$s3
+			j	actuallyop
+		oponcol: #else operating on col
+			move	$a0,$s3
+			move	$a1,$s1
+		actuallyop:
+		jal	get_coordinate
+		lw	$ra,0($sp)
+		
+		bne	$v0,$s5,dontcount #if a tent
+			addi	$s4,$s4,1
+			j	dontcount
+		dontcount:
+		addi	$s3,$s3,1
+		bne	$s3,$s2,covergroup #while not done
+	
+	move	$v0,$s4 #share the counter
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	lw	$s5,24($sp)
+	addi	$sp,$sp,28
+	jr	$ra
+
+# Validates the board, ensuring all groups' tent counts match.
+# @a 0 the symbol for tents
+# @v 0 whether it validates
+validate_board:
+	addi	$sp,$sp,-24
+	sw	$ra,0($sp)
+	sw	$s0,4($sp)
+	sw	$s1,8($sp)
+	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	
+	move	$s3,$a0 #tent symb
+	la	$s0,len
+	lw	$s0,0($s0) #length
+	move	$s1,$zero #row or col
+	grouptype:
+		move	$s2,$zero #group index
+		withingroup:
+			#check the actuality:
+			move	$a0,$s1
+			move	$a1,$s2
+			move	$a2,$s3
+			jal	count_up_group
+			lw	$ra,0($sp)
+			move	$s4,$v0
+			
+			#check our expectation:
+			move	$a0,$s1
+			move	$a1,$s2
+			jal	get_expected
+			lw	$ra,0($sp)
+			
+			#do they match?
+			bne	$s4,$v0,invalid
+			addi	$s2,$s2,1
+			bne	$s2,$s0,withingroup
+		addi	$s1,$s1,1
+		slti	$t0,$s1,2
+		bne	$t0,$zero,grouptype
+	
+	li	$v0,1
+	j	valid
+	invalid:
+		move	$v0,$zero
+	valid:
+	
+	lw	$s0,4($sp)
+	lw	$s1,8($sp)
+	lw	$s2,12($sp)
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	addi	$sp,$sp,24
 	jr	$ra
 
 # Checks a coordinate pair for validity
