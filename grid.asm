@@ -199,6 +199,7 @@ count_up_group:
 			move	$a0,$s3
 			move	$a1,$s1
 		actuallyop:
+		
 		jal	get_coordinate
 		lw	$ra,0($sp)
 		
@@ -385,18 +386,27 @@ print_hline:
 
 # Print out the grid.
 # This should only be called after all set_expected calls.
+# @a 0 symbol for trees, or 0 to leave everything unchanged
+# @a 1 symbol for undecided spaces, which should become...
+# @a 2 symbol for empty spaces
 print_grid:
-	addi	$sp,$sp,-16
+	addi	$sp,$sp,-28
 	sw	$ra,0($sp)
 	sw	$s0,4($sp)
 	sw	$s1,8($sp)
 	sw	$s2,12($sp)
+	sw	$s3,16($sp)
+	sw	$s4,20($sp)
+	sw	$s5,24($sp)
 	
 	#pull in the needed resources:
 	la	$s0,len
 	lw	$s0,0($s0) #grab the length
 	la	$s1,prntq #grab the null-terminated holding place
 	la	$s2,tentsr #grab the rows' expected values
+	move	$s3,$a0 #tree symbol and whether to simplify output
+	move	$s4,$a1 #undecided
+	move	$s5,$a2 #empty
 	
 	#print the top of the border:
 	jal	print_hline
@@ -428,8 +438,20 @@ print_grid:
 			#convert into a number if necessary:
 			slti	$t7,$t6,UPPER_TENT
 			beq	$t7,$zero,isnttree #if an rotating tree
-				addi	$t6,$t6,ZERO_TENT
+				bne	$s3,$zero,masktree #if not masking it
+					addi	$t6,$t6,ZERO_TENT #display as int
+					j	isnttree
+				masktree: #else mask it away
+					move	$t6,$s3 #display using given symbol
 			isnttree:
+			
+			#replace uncertain spots with empties if requested:
+			beq	$s3,$zero,notmasking #if masking things
+				bne	$t6,$s4,notmasking #if unknown
+					move	$t6,$s5 #display as empty
+			notmasking:
+			
+			#perform the printing:
 			sb	$t6,0($s1) #put in front of a NULL
 			move	$a0,$s1
 			syscall
@@ -474,12 +496,14 @@ print_grid:
 	li	$v0,PRINT_STR
 	la	$a0,prntsc
 	syscall
-	li	$v0,PRINT_STR
-	la	$a0,prntsc
-	syscall
 	la	$s2,tentsc #the cols' expected values
 	move	$s1,$zero #current column index
 	print_expdcol:
+		#what we use to fill the empty spaces:
+		li	$v0,PRINT_STR
+		la	$a0,prntsc
+		syscall
+		
 		#the meat of the matter:
 		li	$a0,1 #looking at columns
 		move	$a1,$s1 #our specific column
@@ -487,11 +511,6 @@ print_grid:
 		lw	$ra,0($sp)
 		move	$a0,$v0
 		li	$v0,PRINT_INT
-		syscall
-		
-		#what we use to fill the empty spaces:
-		li	$v0,PRINT_STR
-		la	$a0,prntsc
 		syscall
 		
 		#where we used to talk:
@@ -509,7 +528,10 @@ print_grid:
 	lw	$s0,4($sp)
 	lw	$s1,8($sp)
 	lw	$s2,12($sp)
-	addi	$sp,$sp,16
+	lw	$s3,16($sp)
+	lw	$s4,20($sp)
+	lw	$s5,24($sp)
+	addi	$sp,$sp,28
 	jr	$ra
 
 # Checks whether a coordinate pair is adjacent (including diagonally) to a symbol.

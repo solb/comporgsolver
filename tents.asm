@@ -40,9 +40,11 @@ PRINT_STR = 4
 
 # The feedback to give during a normal run:
 out_1:
-	.asciiz "******************\n**     TENTS    **\n******************\n\n"
+	.asciiz "\n******************\n**     TENTS    **\n******************\n\n"
 out_2:
 	.asciiz "Initial Puzzle\n\n"
+out_3:
+	.asciiz "Final Puzzle\n\n"
 
 # The feedback to give on errors:
 err_1:
@@ -54,7 +56,7 @@ err_3:
 err_4:
 	.asciiz "Illegal tree location, Tents terminating\n"
 err_5:
-	.asciiz "Impossible Puzzle\n"
+	.asciiz "Impossible Puzzle\n\n"
 
 .text
 .align 2
@@ -167,6 +169,10 @@ main:
 	li	$v0,PRINT_STR
 	la	$a0,out_2
 	syscall
+	#move	$a0,$zero
+	li	$a0,SYMB_TREE
+	li	$a1,SYMB_UNK
+	li	$a2,SYMB_EMPT
 	jal	print_grid
 	lw	$ra,0($sp)
 	
@@ -184,8 +190,6 @@ main:
 		li	$a3,SYMB_TENT
 		jal	next_tent
 		lw	$ra,0($sp)
-#		jal	print_grid
-#		lw	$ra,0($sp)
 		beq	$v0,$zero,backup #if there was a valid state
 			addi	$s2,$s2,1
 			j incremented
@@ -196,14 +200,22 @@ main:
 		incremented:
 	bne	$s2,$s1,backtrack #while not done
 	
-	jal	print_grid
-	lw	$ra,0($sp)
-	
 	#check our work:
 	li	$a0,SYMB_TENT
 	jal	validate_board
 	lw	$ra,0($sp)
 	beq	$v0,$zero,backup #retry if invalid
+	
+	#print the valid board:
+	li	$v0,PRINT_STR
+	la	$a0,out_3
+	syscall
+	#move	$a0,$zero
+	li	$a0,SYMB_TREE
+	li	$a1,SYMB_UNK
+	li	$a2,SYMB_EMPT
+	jal	print_grid
+	lw	$ra,0($sp)
 	j	probable
 	
 	impossible:
